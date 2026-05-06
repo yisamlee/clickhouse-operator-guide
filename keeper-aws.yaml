@@ -1,0 +1,74 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-root
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ca-cert
+  namespace: default
+spec:
+  isCA: true
+  commonName: clickhouse-ca
+  secretName: ca-cert-secret
+  duration: 87600h    # 10 years
+  issuerRef:
+    name: selfsigned-root
+    kind: ClusterIssuer
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: local-ca-issuer
+  namespace: default
+spec:
+  ca:
+    secretName: ca-cert-secret
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: keeper-cert
+  namespace: default
+spec:
+  secretName: keeper-cert-secret
+  dnsNames:
+    - "*.keeper-headless.default.svc"
+    - "*.keeper-headless.default.svc.cluster.local"
+  issuerRef:
+    name: local-ca-issuer
+    kind: Issuer
+---
+apiVersion: clickhouse.com/v1alpha1
+kind: KeeperCluster
+metadata:
+  name: keeper
+  namespace: default
+spec:
+  replicas: 3
+  dataVolumeClaimSpec:
+    storageClassName: gp3
+    resources:
+      requests:
+        storage: 20Gi
+  podTemplate:
+    nodeSelector:
+      role: keeper
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: keeper
+  containerTemplate:
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "1"
+        memory: "2Gi"

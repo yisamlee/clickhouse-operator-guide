@@ -1,0 +1,46 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: clickhouse-cluster
+  region: ap-southeast-1
+  version: "1.31"
+
+# Spread across 3 AZs for HA
+availabilityZones:
+  - ap-southeast-1a
+  - ap-southeast-1b
+  - ap-southeast-1c
+
+iam:
+  withOIDC: false   # iam:CreateOpenIDConnectProvider not available; using EKS Pod Identity for EBS CSI instead
+
+managedNodeGroups:
+  - name: clickhouse-nodes
+    instanceType: t3.large
+    minSize: 2
+    maxSize: 6
+    desiredCapacity: 2
+    availabilityZones:
+      - ap-southeast-1a
+      - ap-southeast-1b
+      - ap-southeast-1c
+    volumeSize: 50    # Root volume GB
+    volumeType: gp3
+    labels:
+      role: clickhouse
+    tags:
+      environment: testing
+      app: clickhouse
+
+  - name: keeper-nodes
+    instanceType: t3.medium
+    minSize: 2
+    maxSize: 3
+    desiredCapacity: 2
+    availabilityZones:
+      - ap-southeast-1a
+      - ap-southeast-1b
+      - ap-southeast-1c
+    labels:
+      role: keeper
