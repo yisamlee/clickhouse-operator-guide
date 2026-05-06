@@ -25,7 +25,6 @@ bash scripts/update-aws-credentials.sh
 
 # Verify
 aws sts get-caller-identity
-# Expected: yisam.lee@clickhouse.com, account 925472944448
 ```
 
 ---
